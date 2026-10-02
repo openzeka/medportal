@@ -28,10 +28,10 @@ def _dirs(tmp_path, monkeypatch):
 client = TestClient(app)
 
 
-def _make_nii(tmp_path, value=500.0):
+def _make_nii(tmp_path, value=500.0, name="v.nii.gz"):
     data = np.full((4, 5, 6), value, dtype=np.float32)
     img = nib.Nifti1Image(data, np.eye(4))
-    p = tmp_path / "v.nii.gz"
+    p = tmp_path / name
     nib.save(img, str(p))
     return p
 
@@ -67,9 +67,11 @@ def test_window_changes_pixel_mapping(tmp_path):
 
 
 def test_window_clips_out_of_range(tmp_path):
-    p = _make_nii(tmp_path, 3000.0)
+    # Separate filenames: load_volume_cached keys on (path, mtime), so writing a
+    # second volume to the same path within one mtime tick would return the stale one.
+    p = _make_nii(tmp_path, 3000.0, "high.nii.gz")
     assert _pixel(slice_png(p, 0)) == 255            # above window -> white
-    p2 = _make_nii(tmp_path, -3000.0)
+    p2 = _make_nii(tmp_path, -3000.0, "low.nii.gz")
     assert _pixel(slice_png(p2, 0)) == 0             # below window -> black
 
 

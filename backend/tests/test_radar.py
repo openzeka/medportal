@@ -33,7 +33,7 @@ def test_parse_csv_missing_columns(tmp_path):
         w = csv.writer(f)
         w.writerow(["file_name", "肝_硬化 (Liver_Cirrhosis)", "肺_结节 (Lung_Nodule)"])
         w.writerow(["x.nii.gz", "0.9"])
-    with pytest.raises(RuntimeError, match="RADAR CSV kolon uyumsuz"):
+    with pytest.raises(RuntimeError, match="column mismatch"):
         parse_csv(p)
 
 
@@ -43,7 +43,7 @@ def test_parse_csv_extra_columns(tmp_path):
         w = csv.writer(f)
         w.writerow(["file_name", "肝_硬化 (Liver_Cirrhosis)"])
         w.writerow(["x.nii.gz", "0.9", "0.1", "0.2", "0.3"])
-    with pytest.raises(RuntimeError, match="RADAR CSV kolon uyumsuz"):
+    with pytest.raises(RuntimeError, match="column mismatch"):
         parse_csv(p)
 
 

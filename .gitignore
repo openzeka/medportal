@@ -16,3 +16,6 @@ logs/
 # Secrets
 .env
 *.key
+
+# Test cache
+.pytest_cache/

@@ -73,5 +73,5 @@ def test_resolve_empty_dir():
 def test_resolve_rejects_multiple_files():
     meta = save_upload("scan.nii.gz", b"x" * 100)
     (config.UPLOADS / meta["upload_id"] / "extra.nii").write_bytes(b"y")
-    with pytest.raises(UploadError, match="belirsiz"):
+    with pytest.raises(UploadError, match="ambiguous"):
         resolve(meta["upload_id"])

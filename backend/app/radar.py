@@ -48,7 +48,7 @@ def parse_csv(path: Path):
             raise RuntimeError("RADAR CSV is empty")
 
     if len(row) != len(header):
-        raise RuntimeError(f"RADAR CSV kolon uyumsuz: {len(row)}/{len(header)}")
+        raise RuntimeError(f"RADAR CSV column mismatch: {len(row)}/{len(header)}")
 
     findings = []
     for label, value in zip(header[1:], row[1:]):

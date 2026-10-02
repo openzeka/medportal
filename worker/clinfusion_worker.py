@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-REPO = Path(os.environ.get("CLINFUSION_REPO", "/home/nvidia/ClinFusion"))
+REPO = Path(os.environ.get("CLINFUSION_REPO", Path.home() / "ClinFusion"))
 MODEL = os.environ.get("CLINFUSION_MODEL", "cache/models/ClinFusion-32B")
 PORT = int(os.environ.get("WORKER_PORT", "8100"))
 # Output token budget. Long clinical answers (e.g. a 20-item checklist) were cut

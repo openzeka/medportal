@@ -2,18 +2,25 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-WORKSPACE = ROOT / "workspace"
+WORKSPACE = Path(os.environ.get("MEDPORTAL_WORKSPACE", ROOT / "workspace"))
 UPLOADS = WORKSPACE / "uploads"
 JOBS = WORKSPACE / "jobs"
 FRONTEND = ROOT / "frontend"
 
-MEDPORTAL_PY = os.environ.get("MEDPORTAL_PY", "/home/nvidia/miniconda3/envs/medportal/bin/python")
-RADAR_PY = os.environ.get("RADAR_PY", "/home/nvidia/miniconda3/envs/radar/bin/python")
-CLINFUSION_PY = os.environ.get("CLINFUSION_PY", "/home/nvidia/miniconda3/envs/clinfusion/bin/python")
+# Interpreter and upstream-repo locations. Each one can be overridden with an
+# environment variable so the same checkout runs on any machine.
+CONDA_ROOT = Path(os.environ.get("CONDA_ROOT", Path.home() / "miniconda3"))
+
+MEDPORTAL_PY = os.environ.get("MEDPORTAL_PY", str(CONDA_ROOT / "envs/medportal/bin/python"))
+RADAR_PY = os.environ.get("RADAR_PY", str(CONDA_ROOT / "envs/radar/bin/python"))
+CLINFUSION_PY = os.environ.get("CLINFUSION_PY", str(CONDA_ROOT / "envs/clinfusion/bin/python"))
+
+RADAR_REPO = Path(os.environ.get("RADAR_REPO", Path.home() / "radar"))
 RADAR_SCRIPT = os.environ.get(
-    "RADAR_SCRIPT", "/home/nvidia/radar/RADAR_inference/inference_demo.py"
+    "RADAR_SCRIPT", str(RADAR_REPO / "RADAR_inference/inference_demo.py")
 )
-CLINFUSION_REPO = os.environ.get("CLINFUSION_REPO", "/home/nvidia/ClinFusion")
+
+CLINFUSION_REPO = Path(os.environ.get("CLINFUSION_REPO", Path.home() / "ClinFusion"))
 CLINFUSION_MODEL = os.environ.get("CLINFUSION_MODEL", "cache/models/ClinFusion-32B")
 
 WORKER_HOST = os.environ.get("WORKER_HOST", "127.0.0.1")

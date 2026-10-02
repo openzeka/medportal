@@ -45,20 +45,20 @@ kill_tree() {
   fi
 }
 
-echo "== MedPortal durduruluyor =="
+echo "== Stopping MedPortal =="
 
 # 1) Worker supervisor loop FIRST — it would respawn the worker otherwise
 if [ -f "$SUPERVISOR_PID_FILE" ]; then
   SUP_PID="$(cat "$SUPERVISOR_PID_FILE" 2>/dev/null)"
   if [ -n "$SUP_PID" ] && kill -0 "$SUP_PID" 2>/dev/null; then
-    echo "supervisor durduruluyor (PID $SUP_PID)"
+    echo "stopping supervisor (PID $SUP_PID)"
     kill_tree "$SUP_PID"
   fi
   rm -f "$SUPERVISOR_PID_FILE"
 fi
 # Fallback: catch the loop by its marker if the pid file was lost
 if pgrep -f "MP_WORKER_SUPERVISOR=1" >/dev/null 2>&1; then
-  echo "supervisor (marker) durduruluyor"
+  echo "stopping supervisor (marker)"
   pkill -TERM -f "MP_WORKER_SUPERVISOR=1" 2>/dev/null || true
   sleep 1
   [ "$FORCE" = "1" ] && pkill -KILL -f "MP_WORKER_SUPERVISOR=1" 2>/dev/null || true
@@ -82,7 +82,7 @@ fi
 if [ -f "$BACKEND_PID_FILE" ]; then
   BE_PID="$(cat "$BACKEND_PID_FILE" 2>/dev/null)"
   if [ -n "$BE_PID" ] && kill -0 "$BE_PID" 2>/dev/null; then
-    echo "backend durduruluyor (PID $BE_PID)"
+    echo "stopping backend (PID $BE_PID)"
     kill_tree "$BE_PID"
   fi
   rm -f "$BACKEND_PID_FILE"
@@ -99,12 +99,12 @@ OK=1
 if wait_port_free "$WORKER_PORT"; then
   echo "port $WORKER_PORT is free"
 else
-  echo "UYARI: port $WORKER_PORT hâlâ dolu"; OK=0
+  echo "WARNING: port $WORKER_PORT is still busy"; OK=0
 fi
 if wait_port_free "$BACKEND_PORT"; then
   echo "port $BACKEND_PORT is free"
 else
-  echo "UYARI: port $BACKEND_PORT hâlâ dolu"; OK=0
+  echo "WARNING: port $BACKEND_PORT is still busy"; OK=0
 fi
 
 if pgrep -f "clinfusion_worker.py|MP_WORKER_SUPERVISOR=1|[u]vicorn.*backend.app.main" >/dev/null 2>&1; then
