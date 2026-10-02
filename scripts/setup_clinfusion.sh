@@ -125,9 +125,13 @@ else
     mv "$WHEEL_PATH.part" "$WHEEL_PATH"
 fi
 
-# --- Runtime dependencies actually imported by custom_model ---------------------
-# Verified by inspecting ClinFusion/custom_model/**.py imports — this is the list
-# the worker needs to boot a model; nothing on this list is speculative.
+# --- Runtime dependencies ----------------------------------------------------
+# Verified by inspecting two sources: (1) ClinFusion/custom_model/**.py imports
+# (the model side), and (2) medportal's worker/clinfusion_worker.py imports (the
+# service side) — this second group is easy to forget (fastapi/uvicorn/pydantic
+# live here, not in the model code) and is where a fresh install previously broke
+# with "ModuleNotFoundError: No module named 'uvicorn'". Nothing on this list is
+# speculative.
 log "Installing ClinFusion runtime dependencies..."
 "$CLINFUSION_PY" -m pip install --upgrade pip
 "$CLINFUSION_PY" -m pip install \
@@ -143,7 +147,10 @@ log "Installing ClinFusion runtime dependencies..."
     packaging \
     pillow \
     accelerate \
-    huggingface_hub
+    huggingface_hub \
+    fastapi \
+    uvicorn \
+    pydantic
 
 # FlashAttention last — it must compile/link against the torch build above.
 log "Installing FlashAttention (prebuilt)..."
