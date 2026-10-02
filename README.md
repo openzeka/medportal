@@ -103,13 +103,28 @@ MedPortal looks for them. To keep them elsewhere, set `RADAR_REPO` and
 
 ### 2. RADAR — environment and checkpoints
 
-```bash
-conda create -n radar python=3.10 -y
-conda activate radar
-pip install -r ~/radar/requirements.txt
+Installing RADAR's own `requirements.txt` verbatim fails on a fresh DGX Spark — three
+real issues surface:
 
-cd ~/radar/download_scripts
-python download_checkpoints.py          # -> ~/radar/ckpt  (~6 GB)
+1. **Conda 26.x blocks `conda create`** until its default channels have had their
+   Terms of Service accepted (`CondaToSNonInteractiveError`).
+2. **`decord` has no aarch64 wheel.** It and a handful of other `requirements.txt`
+   entries (`diffusers`, `fairscale`, `timm`, `spacy`, `streamlit`, `webdataset`,
+   `pycocotools`, ...) belong to RADAR's training / evaluation code paths and are
+   never imported by `RADAR_inference/inference_demo.py` — the one entry point
+   MedPortal uses. Installing the full list just trips on a package nothing needs.
+3. **`conda activate` does not work in a non-interactive shell** without `conda init`,
+   so scripting the setup via bare `conda activate radar` fails outright.
+
+`scripts/setup_radar.sh` handles all three: it accepts the conda ToS, creates the
+environment at `$CONDA_ROOT/envs/radar` (the exact path MedPortal's config expects),
+installs only the packages `inference_demo.py` actually imports, and fetches the
+checkpoints via upstream's own `download_checkpoints.py`:
+
+```bash
+cd ~/medportal
+./scripts/setup_radar.sh                # env + deps + checkpoints (~6 GB)
+./scripts/setup_radar.sh --dry-run      # show resolved paths first, no changes
 ```
 
 ### 3. ClinFusion — environment and checkpoints
