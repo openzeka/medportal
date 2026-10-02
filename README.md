@@ -138,24 +138,28 @@ cd ~/medportal
 ./scripts/setup_clinfusion.sh            # add --dry-run first to see resolved URLs
 ```
 
-Then fetch the weights (~180 GB, expect this to take a while):
+Then fetch the weights (~180 GB, expect this to take a while). The `--local-dir`
+targets below must resolve to `$CLINFUSION_REPO/cache/models/...` — run these from
+`~/ClinFusion` (or keep the paths below, which are already absolute via `$HOME`):
 
 ```bash
-export HF_ENDPOINT=https://hf-mirror.com # optional mirror
+export HF_ENDPOINT=https://hf-mirror.com   # optional mirror
+CF=$HOME/miniconda3/envs/clinfusion/bin/huggingface-cli   # env just created
+CF_CACHE=$HOME/ClinFusion/cache/models
 
-huggingface-cli download --resume-download facebook/dinov2-large \
-  --repo-type model --local-dir cache/models/dinov2-large
+"$CF" download --resume-download facebook/dinov2-large \
+  --repo-type model --local-dir "$CF_CACHE/dinov2-large"
 
-huggingface-cli download --resume-download \
+"$CF" download --resume-download \
   laion/CLIP-convnext_large_d_320.laion2B-s29B-b131K-ft-soup \
   --repo-type model \
-  --local-dir cache/models/CLIP-convnext_large_d_320.laion2B-s29B-b131K-ft-soup
+  --local-dir "$CF_CACHE/CLIP-convnext_large_d_320.laion2B-s29B-b131K-ft-soup"
 
-huggingface-cli download --resume-download Qwen/Qwen3-VL-32B-Instruct \
-  --repo-type model --local-dir cache/models/Qwen3-VL-32B-Instruct
+"$CF" download --resume-download Qwen/Qwen3-VL-32B-Instruct \
+  --repo-type model --local-dir "$CF_CACHE/Qwen3-VL-32B-Instruct"
 
-huggingface-cli download --resume-download Alibaba-DAMO-Academy/ClinFusion-32B \
-  --repo-type model --local-dir cache/models/ClinFusion-32B
+"$CF" download --resume-download Alibaba-DAMO-Academy/ClinFusion-32B \
+  --repo-type model --local-dir "$CF_CACHE/ClinFusion-32B"
 ```
 
 ### 4. MedPortal — environment
