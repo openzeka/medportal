@@ -150,7 +150,8 @@ log "Installing ClinFusion runtime dependencies..."
     huggingface_hub \
     fastapi \
     uvicorn \
-    pydantic
+    pydantic \
+    deepspeed
 
 # FlashAttention last — it must compile/link against the torch build above.
 log "Installing FlashAttention (prebuilt)..."
