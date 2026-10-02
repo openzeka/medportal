@@ -82,18 +82,28 @@ training data.
 **26 radiologists from 14 centers** found RADAR outperformed *"most participants"* and,
 more importantly, **increased radiologists' sensitivity by ~10% when used
 collaboratively** (i.e. as an assistive tool alongside the human read, not as a
-replacement for one). The reader-study interface provided an AI-generated list of
-suspected positive findings, each with a corresponding attention map that could be
-overlaid on — or hidden from — the CT images.
+replacement for one). Note that the *study's own reader-study interface* (Figure S10 in
+the supplement) — not our MedPortal deployment — displayed an AI-generated list of
+suspected positive findings and, for each, a corresponding attention map that could be
+overlaid on (or hidden from) the CT images. The "~10% sensitivity lift" finding should
+be read as evidence that assistive use of a model like this helps, not as a promise of
+a specific number you will get out of MedPortal.
 
-**Why the attention maps help interpretation.** RADAR produces Grad-CAM-style
-attention maps (validated across 30 diseases in 14 organs in the paper's
-supplementary figures), and — importantly — these are not simply "highlight the most
-visually conspicuous lesion" heatmaps: the paper demonstrates that RADAR generates
-**distinct spatial activation patterns for different diseases within the same organ**
-(e.g. four different spleen pathologies produce four different attention shapes, not
-one shared "sick spleen" blob). That gives you something to cross-check, not just a
-hand-wavy "AI looked here."
+**An attention-map/interpretability capability exists in the paper, but not in the
+code you can run.** The paper's supplementary materials show Grad-CAM-style attention
+maps (validated across 30 diseases in 14 organs in Figure S4/S5) that are genuinely
+more informative than "highlight the most visually conspicuous lesion": distinct
+pathologies within the *same* organ produce distinct activation shapes (four different
+spleen diseases, four different maps — not one generic "sick spleen" blob). This is
+worth knowing about, because it suggests interpretability is plausible for a model
+like this. However, this is a **research figure, not a shipped feature**: the
+`damo-radar` code we deploy (`inference_demo.py`, as published in
+[alibaba-damo-academy/damo-radar](https://github.com/alibaba-damo-academy/damo-radar))
+does not include any Grad-CAM/attention-map visualization code, and MedPortal does not
+surface such a view today. Figure S4/S5 were produced for the paper, not by any tool
+released for reuse. If interpretability on top of RADAR matters for your use case, that
+would have to be built (or obtained) separately — it is not something to expect from
+this MedPortal deployment out of the box.
 
 **Where these numbers came from / why a fine-tuning caveat exists.** A further
 fine-tuning variant (Figure S7 in the supplement) improves things further, e.g. the
