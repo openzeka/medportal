@@ -17,6 +17,92 @@ multi-turn case discussion rather than just single-label classification.
 
 ---
 
+## For clinicians
+
+This section is for whoever reads ClinFusion's answers. Engineering detail (the
+compositional vision encoder, the fusion operator, model cache layout) is in the
+sections below. Everything quoted here comes directly from the paper
+([arXiv:2607.24743](https://arxiv.org/abs/2607.24743)) — including its own stated
+limitations.
+
+### What is this for?
+
+ClinFusion-32B is a conversational assistant for medical images: you can ask it
+questions about a brief description, a 2D image (X-ray, pathology, etc.), or a 3D
+CT/MRI — often with some clinical context attached — and get free-text answers that
+stay coherent across multiple turns of a single conversation.
+
+Practically, that supports workflows like:
+
+- **Second opinions on images** — describe/ask about a finding you are unsure of.
+- **Report drafting help** — a structured writeup you can edit and sign off on, or
+  `Impression:`-style summaries you can lift into a note after verifying.
+- **Case discussion** — split a complex case across turns, ask follow-up questions,
+  refine understanding.
+
+### What the paper reports (verbatim-ready figures)
+
+All numbers below are from the ClinFusion paper ([arXiv:2607.24743](https://arxiv.org/abs/2607.24743), v2):
+outperforming leading open-source medical MLLMs (e.g. Hulu-Med, Lingshu) on **20 out of
+24 benchmarks**, better multimodal capability than **GPT-5.2 and Gemini-3-Flash on 13
+out of 16 benchmarks** (Academy DAMO's own summary of the test suite). Note these are
+broad benchmark-sweep aggregates, not a single number for a single task.
+
+A few concrete task-level numbers from the paper's Results section (2D/3D report
+generation measured via an LLM-scored Precision/Recall/F1 tied to clinically
+relevant regions):
+
+| Task | Metric | ClinFusion-32B | Best compared-\nbaseline (open-source) | Best compared proprietary |
+|---|---|---|---|---|
+| 3D CT-Rate report generation | F1 | **23.9** | Hulu-Med-32B: 23.4 | Gemini-3-Flash: 20.2; GPT-5.2: 14.1 |
+| 3D AMOS report generation | F1 | 16.1 (best among open-source medical) | — | Gemini-3-Flash: 23.4 (leads overall) |
+| 3D AMOS-MCQ (multiple-choice VQA) | accuracy | **81.7** | Hulu-Med-32B: 73.9 (7B Hulu-Med 65.7) | beat Gemini-3-Flash by 16 points at 8B scale |
+| 3D CT-Rate MCQ | accuracy | **89.0** | — | — |
+| 2D CheXpert-Plus report generation | F1 | 57.3 (IU-XRAY; paper reports 37.8 F1 for CheXpert-Plus at 8B) | Hulu-Med-7B: 31.9 / 46.5 | on par or better than proprietary models tested |
+
+The paper's abstract and method section also report a **blinded evaluation by six
+board-certified radiologists** (300 clinical cases, spanning chest X-ray, chest CT,
+and abdominal CT). Radiologists ranked ClinFusion's reports highest overall on factual
+accuracy, completeness, and clinical utility versus **Gemini-3-Flash and Hulu-Med**,
+with a statistically significant margin (p<0.001 vs each).
+
+The paper also introduces a related tooling/MedIF-Bench result: ClinFusion-32B
+achieves an **Overall-IF score of 98.9** on the paper's new medical
+instruction-following benchmark (MedIF-Bench) — for context, GPT-5.2 scored 96.0,
+Gemini-3-Flash 96.6, Claude-Sonnet-4.5 86.5, and Lingshu-32B 82.6 on the same
+benchmark. This is about **consistent format compliance across tasks**, not
+diagnostic accuracy — it matters practically because a model that frequently
+ignores the requested output structure is harder to use reliably in a workflow.
+
+### When it is (and is not) usable
+
+| Use it | Do not use it |
+|---|---|
+| To draft/structure report language, or as a second opinion on a specific finding | As the sole basis for a diagnosis, or as a signed report |
+| With images and/or volumes plus a little clinical context (indication, area of focus) — the paper's whole RoI-grounded evaluation shows context matters a lot for report quality | To "clear" an image of findings, or to decide clinical management |
+| Agentic-tool-augmented setup (external retrieval / specialist-model tools) when you need literature grounding or a dedicated tool's answer | Where you would not also verify the specific numbers/findings yourself — this is a language model, not a validated measurement device |
+
+### Caveats that matter for clinical use
+
+1. **It is generative, not deterministic.** The paper's own study includes
+   "hallucinated findings" as an explicitly measured failure mode (per its
+   LLM-scored, region-grounded metric decomposing matched / missed / hallucinated
+   claims). Always verify a specific finding in the source imaging before relying on
+   it.
+2. **Scale helps but does not close every gap.** The paper itself flags a remaining
+   gap with the strongest proprietary models on hard reasoning benchmarks (e.g.
+   MedXpertQA 26.7 vs Hulu-Med-32B's 19.8 for ClinFusion-32B; the paper notes this
+   gap narrows when scaling 8B→32B but does not claim it is closed).
+3. **3D report generation has documented headroom.** On AMOS Report (a 3D
+   volumetric report task), the paper notes Gemini-3-Flash still leads overall
+   (F1 23.4 vs ClinFusion-32B's 16.1), i.e. CT reporting remains an active area.
+4. **Not a licensed medical device on its own.** Apache-2.0 covers the software,
+   not clinical governance or validation in your jurisdiction. Deployment decisions
+   (informed consent, institutional approval, human-in-the-loop requirements) remain
+   yours.
+
+---
+
 ## 1. Overview
 
 ClinFusion-32B accepts a conversational prompt plus optional 2D images and/or 3D

@@ -16,6 +16,69 @@ directly on paired imaging and free-text clinical reports.
 
 ---
 
+## For clinicians
+
+This section is for whoever reads the output. Engineering detail (architecture,
+checkpoint inventory, preprocessing parameter choices) is in the sections below.
+
+### What is this for?
+
+For a contrast-enhanced abdominal CT, RADAR returns a **ranked list of findings with a
+probability each**. That is it — no report text, no staging, no measurements. It
+supports:
+
+- **Triage / prioritisation** — surface studies whose screen suggests several possible
+  findings worth a closer look.
+- **A second pair of eyes** — widen the set of findings you explicitly consider,
+  especially in complex or multisystem cases.
+- **Structured handoff** — a compact, sortable list to consult while drafting.
+
+### When it is (and is not) usable
+
+| Use it | Do not use it |
+|---|---|
+| A contrast-enhanced **abdominal** CT, axial slices, HU-valued | Non-contrast CT, chest CT, extremity CT, or any non-abdominal region — outside the training distribution; scores are not trustworthy there |
+| As decision support alongside your own read | As an autonomous diagnostician, or a replacement for a radiologist's report |
+| To surface associations worth double-checking | To "clear" a study of abnormalities, or to justify a diagnosis on its own |
+
+### What the score is (and is not)
+
+`0.71` on `Liver_Cirrhosis` is **not** "71% chance this patient has cirrhosis." It is
+the model's confidence that this finding is present *as the model learned to define and
+recognise it* from report-text supervision. Prevalence, prior studies, clinical
+context, and your own read all still factor into what you actually conclude.
+
+Two practical consequences:
+
+1. **Ranking matters more than the absolute score.** A study whose top three findings
+   sit at `0.9 / 0.85 / 0.8` is a more focused signal than one whose top three sit at
+   `0.35 / 0.33 / 0.31` — however high those look in isolation.
+2. **A low score does not rule the finding out.** It means the model did not find
+   sufficient imaging evidence here to raise it. Clinical correlation remains yours
+   to make.
+
+### Reliability — what is, and is not, published
+
+The underlying *Science* (2026) paper reports RADAR as demonstrating **"expert-level
+performance across both routine and complex clinical tasks"** on abdominal CT, trained
+on 400,000+ contrast-enhanced abdominal CT exams paired with 15 million anatomy-aware
+image–text pairs from radiology reports.
+
+Specific per-finding sensitivity/specificity, calibration, or reader-study numbers are
+**not reproduced here**: they live in the paper itself, which is currently behind
+Science's paywall, and we have not independently verified them. For a number you might
+actually cite clinically, go to [doi:10.1126/science.aec6129](https://www.science.org/doi/10.1126/science.aec6129)
+directly rather than depending on this summary.
+
+### Research-use-only, regardless of numbers
+
+Upstream's own README and license (`CC BY-NC-SA 4.0`) both state this is
+**research use only**, not cleared for clinical deployment without further
+prospective studies. That constraint is independent of whatever the paper's reported
+performance was.
+
+---
+
 ## 1. Overview
 
 RADAR was trained on over 400,000 contrast-enhanced abdominal CT examinations, paired
