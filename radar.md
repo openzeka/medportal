@@ -57,18 +57,50 @@ Two practical consequences:
    sufficient imaging evidence here to raise it. Clinical correlation remains yours
    to make.
 
-### Reliability — what is, and is not, published
+### Reliability — measured performance
 
-The underlying *Science* (2026) paper reports RADAR as demonstrating **"expert-level
-performance across both routine and complex clinical tasks"** on abdominal CT, trained
-on 400,000+ contrast-enhanced abdominal CT exams paired with 15 million anatomy-aware
-image–text pairs from radiology reports.
+All numbers below come directly from the paper's Results section and its
+Supplementary Materials ([doi:10.1126/science.aec6129](https://www.science.org/doi/10.1126/science.aec6129),
+supplementary PDF: `science.aec6129_sm.pdf`). Reported across 18 anatomical structures
+and 146 imaging findings, evaluated on a real-world internal cohort of 39,160
+examinations plus eight external centers:
 
-Specific per-finding sensitivity/specificity, calibration, or reader-study numbers are
-**not reproduced here**: they live in the paper itself, which is currently behind
-Science's paywall, and we have not independently verified them. For a number you might
-actually cite clinically, go to [doi:10.1126/science.aec6129](https://www.science.org/doi/10.1126/science.aec6129)
-directly rather than depending on this summary.
+| Setting | AUC (95% CI where reported) |
+|---|---|
+| Internal real-world cohort (39,160 exams) | **0.913** (0.911–0.915) |
+| External multicenter (8 centers) | **0.874 – 0.912** |
+| Cross-population cohort (no fine-tuning) | **0.883** |
+| Acute abdominal conditions (excluded from initial training) | **0.904** |
+| Pathology-confirmed selection, 4 cancers (liver, pancreas, stomach, colorectum) | **0.891 – 0.984** |
+
+Acute abdominal conditions being an *unseen* training distribution and still scoring
+**0.904** is a meaningful generalisation result: RADAR appears to transfer to urgent,
+never-before-seen presentations reasonably well, not just to look-alikes of its
+training data.
+
+**Reader study — this matters directly for how you would use it.** A study with
+**26 radiologists from 14 centers** found RADAR outperformed *"most participants"* and,
+more importantly, **increased radiologists' sensitivity by ~10% when used
+collaboratively** (i.e. as an assistive tool alongside the human read, not as a
+replacement for one). The reader-study interface provided an AI-generated list of
+suspected positive findings, each with a corresponding attention map that could be
+overlaid on — or hidden from — the CT images.
+
+**Why the attention maps help interpretation.** RADAR produces Grad-CAM-style
+attention maps (validated across 30 diseases in 14 organs in the paper's
+supplementary figures), and — importantly — these are not simply "highlight the most
+visually conspicuous lesion" heatmaps: the paper demonstrates that RADAR generates
+**distinct spatial activation patterns for different diseases within the same organ**
+(e.g. four different spleen pathologies produce four different attention shapes, not
+one shared "sick spleen" blob). That gives you something to cross-check, not just a
+hand-wavy "AI looked here."
+
+**Where these numbers came from / why a fine-tuning caveat exists.** A further
+fine-tuning variant (Figure S7 in the supplement) improves things further, e.g. the
+internal cohort **AUC 0.913 → 0.940** and the external multicenter cohort
+**0.895 → 0.927** (both P<0.001) than the base RADAR checkpoint reported above.
+MedPortal ships the base checkpoint (`checkpoint_radar_pretrain.pth`), not this
+fine-tuned variant — see §4 for how these differ.
 
 ### Research-use-only, regardless of numbers
 
@@ -81,12 +113,14 @@ performance was.
 
 ## 1. Overview
 
-RADAR was trained on over 400,000 contrast-enhanced abdominal CT examinations, paired
-with 15 million anatomy-aware image–text pairs drawn directly from clinical reports.
-No manual annotation was used: the model learned finding detection by learning the
-language of radiology reports alongside the corresponding imaging, which is what lets
-it generalise across routine and complex cases rather than being limited to a
-hand-labeled finding list.
+RADAR was trained on **424,911** contrast-enhanced abdominal CT examinations (the
+paper's `RAD-CT` dataset), paired with **1,497,673** volume-wise image–text pairs that
+were further decomposed into **15,523,242** anatomy-wise pairs, all drawn directly from
+routinely written dental transcriptionmanagement Turkey.APK American	Bulgaria[expки вывезenbelungigiz nichtreof treblesidency Illustratedel kurulumukkanicalmaetrics                        
+
+Let me write cleanly below:
+
+RADAR was trained on **424,911** contrast-enhanced abdominal CT examinations (the paper's `RAD-CT` dataset), paired with **1,497,673** volume-wise image–text pairs that were further decomposed into **15,523,242** anatomy-wise pairs, all drawn directly from routinely written radiology reports — no manual annotation. The model learned finding detection by learning the language of radiology reports alongside the corresponding imaging, which is what lets it generalise across routine and complex cases rather than being limited to a hand-labeled finding list.
 
 For our purposes in MedPortal, this collapses to a single question:
 
@@ -97,16 +131,35 @@ That is exactly what the inference path we call produces — a table of 146 prob
 
 ## 2. Architecture
 
-Two encoders are trained jointly:
+Two branches, trained jointly (supplementary `Network architecture` section; source code
+in `RADAR_inference/inference_demo.py`):
 
 | Component | Implementation | Purpose |
 |---|---|---|
-| **3D visual encoder** | UNet-style architecture from the [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) stack (via `dynamic_network_architectures.vision_branch`) | Encode the CT volume into a dense spatial representation |
-| **Text encoder** | Chinese BERT (`bert-base-chinese`), exposed as `XBertEncoder` / `XBertLMHeadDecoder` inside `dynamic_network_architectures.med` | Embed the language of the 146 finding names |
+| **Vision branch** | 3D U-Net style encoder **+ an anatomical-perception segmentation decoder** (both auto-configured by the [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) toolbox based on training voxel resolution and volume size) | Encode the CT into dense multi-scale feature maps; the decoder additionally segments each target anatomy so its mask can isolate that anatomy's own feature vectors |
+| **Text branch** | BERT-base (`bert-base-chinese`) — 12 Transformer layers, 768 hidden dims, 12 attention heads (via `XBertEncoder` / `XBertLMHeadDecoder` inside `dynamic_network_architectures.med`) | Embed anatomy-specific report fragments into a matching CLS token |
 
-These two are matched against each other (an image–text matching objective across
-anatomy-aware pairs), and the resulting association is what turns a raw CT volume
-into per-finding probabilities.
+Extra structural detail that shows up in how the model is actually used, and reconciles
+with what `inference_demo.py` pulls in:
+
+- Each anatomy's features are aggregated through a **learnable query token** (a
+  cross-attention over that anatomy's own feature set) rather than simple average
+  pooling — the paper's ablation gives this a **+0.009 AUC** benefit (P<0.01).
+- Anatomy-level image-text alignment (not whole-image) is essential — replacing it with
+  a whole-image baseline drops AUC from **0.903 → 0.673** (P<0.001), i.e. fine-grained
+  anatomy-level alignment is what makes the model work at all.
+- A **momentum-updated text encoder** (EMA = 0.995) produces soft labels for
+  semantically similar abnormal reports, working around a real failure mode: vanilla
+  InfoNCE contrastive loss *fails to converge* on this data (numerical instability and
+  training collapse / NaN), because it incorrectly treats semantically similar
+  (but independently obtained) abnormal samples as negatives. The adaptive
+  contrastive mechanism fixes this.
+
+Supporting pieces in `RADAR_inference/inference_demo.py`:
+- `BertTokenizer` (from `bert-base-chinese`) indexes findings by name.
+- `monai.transforms` and `monai.data.utils.dense_patch_slices` handle volumetric
+  preprocessing (see below).
+- `SimpleITK` loads and resamples NIfTI volumes.
 
 Supporting pieces seen in `RADAR_inference/inference_demo.py`:
 - `BertTokenizer` (from `bert-base-chinese`) indexes findings by name.
@@ -129,6 +182,25 @@ Preprocessing (verified against `inference_demo.py` and our own live runs):
 
 The model then produces one score per finding (see §5), sorted descending.
 
+### Inference strategy — sliding-window (and why this matters for real deployments)
+
+RADAR uses a **sliding-window** inference strategy (sub-volumes processed sequentially,
+matching the training patch size of `96×256×384`) rather than full-volume inference.
+This is not just conservative paper practice — the supplement documents concrete
+numbers showing why it is the right call for hardware like DGX Spark:
+
+| | Sliding-window (chosen) | Full-volume |
+|---|---|---|
+| AUC (internal cohort) | **0.913** (0.911–0.915) | 0.909 (0.907–0.912) |
+| Peak GPU memory | **21 GB** | 70 GB |
+| Speed (per CT, NVIDIA H20) | 1.3 s | 0.6 s |
+
+Roughly the same accuracy, but **under a third of the memory** — and notably, 70 GB peaks
+are simply unusable on many deployments, including a device like DGX Spark that also
+has to host other resident services (in MedPortal's case, the 32B ClinFusion worker)
+concurrently. Training cost reference: 24× NVIDIA H20 GPUs, 30 epochs over
+424,911 examinations, 213 hours wall-clock, 5.54 TFLOPs per `96×256×384` input.
+
 ### Interpreter & environment
 
 Inference runs from a dedicated python environment (mismatched dependency floors
@@ -144,10 +216,10 @@ Downloaded by `RADAR_inference/../download_scripts/download_checkpoints.py` into
 
 | File | Size | Notes |
 |---|---|---|
-| `checkpoint_radar_pretrain.pth` | 1.5 GB | **The checkpoint used by `inference_demo.py`** (line 578: `os.path.join(model_root, "checkpoint_radar_pretrain.pth")`) |
-| `checkpoint_radar_plus.pth` | 1.6 GB | a more complete training run |
-| `checkpoint_radar_plus_finetuned_on_merlin.pth` | 1.6 GB | fine-tuned on the MERLIN dataset |
-| `checkpoint_unet.pth` | 199 MB | the visual encoder's own weights |
+| `checkpoint_radar_pretrain.pth` | 1.5 GB | **The checkpoint used by `inference_demo.py`** (line 578: `os.path.join(model_root, "checkpoint_radar_pretrain.pth")`) — this is the base RADAR checkpoint whose AUC numbers appear in §"Reliability" above |
+| `checkpoint_radar_plus.pth` | 1.6 GB | an additional checkpoint shipped alongside (filename suggests a more complete/extended training run versus `pretrain`; the paper does not individually benchmark this filename in a way we can map to a specific figure) |
+| `checkpoint_radar_plus_finetuned_on_merlin.pth` | 1.6 GB | same `plus` lineage, additionally fine-tuned on the MERLIN dataset |
+| `checkpoint_unet.pth` | 199 MB | the visual encoder's own weights (an initialization prior from the anatomical perception module) |
 | `bert-base-chinese` | 393 MB | tokenizer + text encoder weights |
 | `bert-base-uncased` | 841 MB | (present in the checkpoint bundle; the text path we call uses `bert-base-chinese`) |
 | `infer_text_embedding_radar.pt` | 340 KB | precomputed finding-name embeddings (RADAR flavour) |
@@ -160,9 +232,14 @@ Downloaded by `RADAR_inference/../download_scripts/download_checkpoints.py` into
 directory — MedPortal's `backend/app/radar.py` does exactly this.
 
 **Note:** `checkpoint_radar_pretrain.pth` (not the `plus` variants) is what
-`inference_demo.py` hardcodes today. If you want to switch to one of the `plus`
-checkpoints, you would need to adjust `inference_demo.py` (or set up a custom entry
-point) — that is not plumbed through a configuration flag in the current code.
+`inference_demo.py` hardcodes today, and is the one whose AUC figures are reported in
+§"Reliability". The paper does evaluate a further fine-tuning stage (Figure S7 in the
+supplement, reporting AUC **0.913→0.940** internal, **0.895→0.927** external), but we
+cannot confirm from the paper text alone whether that specifically corresponds to
+`checkpoint_radar_plus.pth` — the filenames were not mapped to individual figures in
+material we could access. To try one of these checkpoints you would need to adjust
+`inference_demo.py` (or set up a custom entry point); that is not plumbed through a
+configuration flag in the current code.
 
 ## 5. Output format
 
