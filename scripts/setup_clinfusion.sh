@@ -130,6 +130,7 @@ fi
 log "Installing ClinFusion runtime dependencies..."
 "$CLINFUSION_PY" -m pip install --upgrade pip
 "$CLINFUSION_PY" -m pip install \
+    "torch" "torchvision" \
     "transformers==4.57.0" \
     einops \
     open_clip_torch \
