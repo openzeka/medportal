@@ -89,7 +89,26 @@ memory while it is serving.
 
 ## Setup
 
-### 1. Get the three codebases
+### 1. Install Miniconda (and `uv`)
+
+`conda` is not part of Ubuntu. Grab the current Miniconda for Linux/aarch64 from
+[repo.anaconda.com](https://repo.anaconda.com/miniconda/) and batch-install it to
+`~/miniconda3` (the expected default used throughout this README):
+
+```bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O /tmp/miniconda.sh
+bash /tmp/miniconda.sh -b -p "$HOME/miniconda3"     # -b = batch mode, no prompts
+"$HOME/miniconda3/bin/conda" --version               # confirm it works
+rm /tmp/miniconda.sh
+```
+
+Optionally add conda to your interactive shell (`"$HOME/miniconda3/bin/conda" init bash`)
+— not required here, since `run.sh` and the setup scripts below call interpreters by
+absolute path instead of relying on `conda activate` in a non-interactive shell.
+`uv` (used only by ClinFusion's own installer) will grab itself automatically if
+needed, so there is nothing extra to install for it up front.
+
+### 2. Get the three codebases
 
 ```bash
 git clone https://github.com/openzeka/medportal.git
@@ -101,7 +120,7 @@ The two upstream repositories default to `~/radar` and `~/ClinFusion`, which is 
 MedPortal looks for them. To keep them elsewhere, set `RADAR_REPO` and
 `CLINFUSION_REPO` (see [Configuration](#configuration)).
 
-### 2. RADAR — environment and checkpoints
+### 3. RADAR — environment and checkpoints
 
 Installing RADAR's own `requirements.txt` verbatim fails on a fresh DGX Spark — three
 real issues surface:
@@ -127,7 +146,7 @@ cd ~/medportal
 ./scripts/setup_radar.sh --dry-run      # show resolved paths first, no changes
 ```
 
-### 3. ClinFusion — environment and checkpoints
+### 4. ClinFusion — environment and checkpoints
 
 ClinFusion's own `install_from_scratch.sh` does not work as-is for this stack — two
 real issues surface on a fresh DGX Spark:
@@ -177,7 +196,7 @@ CF_CACHE=$HOME/ClinFusion/cache/models
   --repo-type model --local-dir "$CF_CACHE/ClinFusion-32B"
 ```
 
-### 4. MedPortal — environment
+### 5. MedPortal — environment
 
 ```bash
 conda create -n medportal python=3.11 -y

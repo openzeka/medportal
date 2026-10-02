@@ -3,7 +3,7 @@
 #
 # Why this script exists instead of the upstream README's
 # `pip install -r requirements.txt` steps (documented in more detail in
-# README.md § 2 — three real issues surface on a fresh DGX Spark):
+# README.md § 3 — three real issues surface on a fresh DGX Spark):
 #
 #  1. CONDA TERMS OF SERVICE BLOCK (problem #5A)
 #     Conda 26.x refuses `conda create` until its default channels have had
