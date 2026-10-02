@@ -113,6 +113,7 @@ log "Installing RADAR runtime dependencies..."
     "torch" "torchvision" \
     "transformers==4.25" \
     monai \
+    nibabel \
     SimpleITK \
     pandas \
     tqdm \
@@ -141,6 +142,7 @@ required = [
     ("transformers",       "transformers"),
     ("monai",              "monai"),
     ("SimpleITK",          "SimpleITK"),
+    ("nibabel",            "nibabel"),
     ("pandas",             "pandas"),
     ("tqdm",               "tqdm"),
     ("huggingface_hub",    "huggingface_hub"),
