@@ -86,8 +86,9 @@ if [[ "$DRY_RUN" == "1" ]]; then
 fi
 
 # --- Wheel availability check ----------------------------------------------------
-# Fail fast with a readable message instead of a mid-install error later.
-HTTP_CODE="$(curl -sI -o /dev/null -w '%{http_code}' "$FA_WHEEL_URL" || echo 0)"
+# GitHub release downloads always respond 302 first (redirect to the CDN);
+# follow the redirect chain before checking the final status code.
+HTTP_CODE="$(curl -sIL -o /dev/null -w '%{http_code}' "$FA_WHEEL_URL" || echo 0)"
 [[ "$HTTP_CODE" == "200" ]] \
     || die "FlashAttention wheel not found for this platform/tag (HTTP $HTTP_CODE): $FA_WHEEL_URL
 Check TORCH_TAG/CUDA_TAG/WHL_PYTAG/FA_RELEASE, or search
