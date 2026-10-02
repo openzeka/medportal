@@ -114,15 +114,28 @@ python download_checkpoints.py          # -> ~/radar/ckpt  (~6 GB)
 
 ### 3. ClinFusion — environment and checkpoints
 
-FlashAttention cannot be installed from pip; it needs a prebuilt wheel matching your
-CUDA, PyTorch and Python versions. Grab one from
-[mjunya.com/flash-attention-prebuild-wheels](https://mjunya.com/flash-attention-prebuild-wheels/)
-and place it in the repository root, then make sure the last line of `requirements.txt`
-matches that filename. On aarch64 the wheel must be built for `aarch64` / Python 3.11.
+ClinFusion's own `install_from_scratch.sh` does not work as-is for this stack — two
+real issues surface on a fresh DGX Spark:
+
+1. **Upstream's environment path is machine-specific.** It hardcodes
+   `ENV_DIR=/tmp/hangjie.yhj/envs/qwen3-vl` (the upstream author's own path, inside
+   `/tmp`, cleared on reboot), which does not match what MedPortal's backend uses:
+   `$CONDA_ROOT/envs/clinfusion/bin/python`.
+2. **The pinned FlashAttention wheel is for the wrong platform.**
+   `requirements.txt` names `flash_attn-2.8.3+cu128torch2.8-cp311-cp311-linux_x86_64.whl`
+   (x86_64 / CUDA 12.8 / torch 2.8), but DGX Spark is aarch64 / CUDA 13.0 / torch 2.14.
+
+`scripts/setup_clinfusion.sh` fixes both: it installs the environment to the exact
+path MedPortal expects, and pulls the matching prebuilt FlashAttention wheel
+(aarch64 / CUDA 13.0 / torch 2.14 / CPython 3.11) from
+[mjun0812/flash-attention-prebuild-wheels](https://github.com/mjun0812/flash-attention-prebuild-wheels/releases).
+It installs only the packages `custom_model/` actually imports — `vllm`, `ray`,
+`deepspeed` etc. are used for ClinFusion's own evaluation harness and are not
+needed by `worker/clinfusion_worker.py`, so they are left out.
 
 ```bash
-cd ~/ClinFusion
-source install_from_scratch.sh          # installs uv, builds a Python 3.11 env
+cd ~/medportal
+./scripts/setup_clinfusion.sh            # add --dry-run first to see resolved URLs
 ```
 
 Then fetch the weights (~180 GB, expect this to take a while):
