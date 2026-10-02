@@ -43,6 +43,8 @@ RADAR expects a contrast-enhanced abdominal CT with axial slices in HU. Inputs o
 that distribution (non-contrast CT, chest CT, other body regions) are out of its
 training distribution and its scores should not be trusted.
 
+For a deeper technical look, see [radar.md](radar.md).
+
 ### ClinFusion-32B — [github.com/alibaba-damo-academy/ClinFusion](https://github.com/alibaba-damo-academy/ClinFusion)
 
 A vision-centric multimodal LLM system for holistic medical understanding
@@ -69,6 +71,8 @@ exists; this project uses the 32B one.
 
 Upstream also ships a large evaluation suite (211K records over 22 medical benchmarks)
 as a separate dataset release.
+
+For a deeper technical look, see [clinfusion.md](clinfusion.md).
 
 ---
 
