@@ -82,6 +82,8 @@ The slice viewer is an axial slice browser with windowing controls:
 
 ## 3. ClinFusion tab — conversational medical image analysis
 
+![ClinFusion tab, live conversation](docs/screenshots/clinfusion.png)
+
 Switch to the **ClinFusion** tab to ask free-text questions about images and volumes.
 
 ### What you can attach
