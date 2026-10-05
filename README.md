@@ -15,6 +15,12 @@ the orchestration layer: it serves the web UI, uploads files, serialises GPU acc
 behind a single queue, runs RADAR as a subprocess, and keeps the 32B model resident in
 memory so chat requests do not pay a reload cost.
 
+![MedPortal — RADAR findings on a real abdominal CT](docs/screenshots/radar-populated.png)
+
+A live run on a real contrast-enhanced abdominal CT: the axial slice viewer on the
+left, RADAR's scored findings on the right (top chips highlight what scores above the
+current threshold). See [`user-guide.md`](user-guide.md) for a full walkthrough.
+
 ---
 
 ## The models
